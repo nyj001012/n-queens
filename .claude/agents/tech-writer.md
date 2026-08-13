@@ -1,7 +1,7 @@
 ---
 name: tech-writer
 description: "최종 구현된 소스 코드와 아키텍처를 분석하여 사내 위키, API 스펙 문서, 운영 가이드를 작성합니다. '문서화', '위키 작성', '가이드 갱신' 요청 시 호출하십시오. 코드 수정 요청 시에는 트리거하지 마십시오."
-model: opus
+model: haiku
 tools: Read, Write, Edit, Glob, Grep, Bash, TaskUpdate, TaskList
 ---
 
