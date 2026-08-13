@@ -1,7 +1,7 @@
 ---
 name: release-manager
 description: "Phase 4(E2E 테스트)까지 완료된 현재 feature 브랜치의 마이크로 커밋들을 원격 저장소에 Push하고, 플랫폼을 판별하여 PR 또는 MR을 생성합니다."
-model: sonnet
+model: haiku
 tools: Bash, Read, Write, SendMessage
 ---
 
