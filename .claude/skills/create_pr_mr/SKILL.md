@@ -13,7 +13,7 @@ allowed-tools:
 
 1. **로컬 커밋 원격 Push (Push to Origin)**
    - 🚨 **가장 먼저 수행:** `Bash` 도구를 사용하여 **`git push -u origin HEAD`** 명령어를 실행한다.
-   - 오케스트레이터가 작성해둔 로컬의 마이크로 커밋들이 원격 `feature/issue-*` 브랜치에 안전하게 업로드되었는지 확인한다.
+   - 오케스트레이터가 작성해둔 로컬의 마이크로 커밋들이 원격 작업 브랜치(`<타입>/<이슈번호>-<슬러그>`)에 안전하게 업로드되었는지 확인한다.
 
 2. **플랫폼 판별 및 Diff 분석 (Context Analysis)**
    - `git remote -v`로 GitHub/GitLab 여부를 판별한다.

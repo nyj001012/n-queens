@@ -51,7 +51,9 @@ allowed-tools:
 
 ### Phase 2: 티켓팅 및 브랜치 파생 (Sub-agent)
 - 필요한 역할만 `Agent`로 호출한다. 신규 티켓이 필요하면 `issue-pm` agent type, 계약이 필요하면 `tech-leader` agent type을 명시한다.
-- ⭐️ `issue-pm`이 티켓을 생성하고 **`feature/issue-*` 브랜치로 자동 체크아웃(Checkout)**하는지 모니터링한다.
+- ⭐️ `issue-pm`이 티켓을 생성하고 **`<타입>/<이슈번호>-<슬러그>` 브랜치로 자동 전환(`git switch -c`)**하는지 모니터링한다. 타입은 `feature`·`fix`·`chore`·`docs` 중 작업 성격에 맞는 것을 사용한다.
+- ⭐️ 오케스트레이터는 `issue-pm`이 생성한 이슈 본문의 범위가 사용자 요청과 일치하는지 **직접 대조 검증**한다. 불일치 시 즉시 `gh issue edit`/`glab issue update`로 정정하고 감사 로그에 편차를 기록한다.
+- ⭐️ `issue-pm`의 `tools`에는 TaskBoard·`SendMessage`가 없다(서브 에이전트). 따라서 티켓 내용은 **스폰 프롬프트 본문에 전문을 담아** 전달하고, `TaskCreate`로 등록한 티켓 참조만 남기지 않는다.
 - 완료 후 `git commit -m "chore(issue): 티켓 생성 및 인터페이스 계약 완료"` 실행.
 
 ### Phase 3: 병렬 개발 트랙 (FE/BE/QA/Infra)
