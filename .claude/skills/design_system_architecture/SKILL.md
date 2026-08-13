@@ -2,8 +2,8 @@
 name: design_system_architecture
 description: "사용자의 요구사항을 분석하여 전체 시스템 아키텍처(FE/BE/DB/Infra)를 기획하고 명세서를 작성합니다. '새로운 프로젝트 기획', '아키텍처 설계', '시스템 구조 설계', 'DB 스키마 구성' 요청 시 반드시 이 스킬을 호출하십시오. 특정 API의 소스 코드 구현이나 인프라 스크립트 작성 등 세부 실무 작업에는 절대 이 스킬을 트리거하지 마십시오."
 allowed-tools:
-  - ReadFile
-  - WriteFile
+  - Read
+  - Write
   - Bash
   - SendMessage
 ---

@@ -2,8 +2,8 @@
 name: setup_infra_cicd
 description: "시스템 아키텍처를 바탕으로 Docker 환경 구성, GitLab CI 배포 스크립트 작성, 폐쇄망 관측성(Loki/Grafana) 설치 스크립트를 구축합니다. '도커 설정', 'CI/CD 구축', '배포 파이프라인', '인프라 스크립트 작성' 요청 시 반드시 이 스킬을 호출하십시오. 백엔드 API 작성이나 프론트엔드 UI 화면 구현 등 애플리케이션 코드 수정에는 절대 이 스킬을 트리거하지 마십시오."
 allowed-tools:
-  - ReadFile
-  - WriteFile
+  - Read
+  - Write
   - Bash
   - SendMessage
 ---
@@ -13,7 +13,7 @@ allowed-tools:
 ## Workflow (작업 순서)
 
 1. **인프라 명세 분석 (Architecture Review)**
-   - `ReadFile`을 사용하여 `.claude/_workspace/01_architecture/design.md`를 읽고, 서버 구성, DB 스펙, 관측성 스택(Loki, Grafana, Alloy)의 요구사항을 파악한다.
+   - `Read`을 사용하여 `.claude/_workspace/01_architecture/design.md`를 읽고, 서버 구성, DB 스펙, 관측성 스택(Loki, Grafana, Alloy)의 요구사항을 파악한다.
 
 2. **Docker 컨테이너 및 볼륨 설계 (Docker Configuration)**
    - `docker-compose.yml` 및 `Dockerfile`을 작성한다.

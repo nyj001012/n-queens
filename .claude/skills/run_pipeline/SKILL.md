@@ -1,30 +1,33 @@
 ---
 name: run_pipeline
-description: "소프트웨어 개발 파이프라인(SDLC)을 지휘하고 10개의 에이전트 팀을 동적 라우팅/스폰/해체합니다. 전체 시스템 개발, 하네스 가동, 특정 파트(프론트엔드 단독, 백엔드 단독, 인프라 단독 등) 작업 요청 시 반드시 이 스킬을 호출하십시오. 단, 코드의 단순 에러 디버깅 등 국소적인 작업에는 이 스킬을 트리거하지 마십시오."
+description: 소프트웨어 개발 파이프라인(SDLC)을 지휘합니다. 브랜치 파생부터 마이크로 커밋, E2E 통합 테스트, MR 생성까지 애자일 사이클 전체를 통제합니다. 전체 시스템 개발, 하네스 가동, 특정 파트(프론트엔드 단독, 백엔드 단독, 인프라 단독 등) 작업 요청 시 반드시 이 스킬을 호출하십시오. 단, 코드의 단순 에러 디버깅 등 국소적인 작업에는 이 스킬을 트리거하지 마십시오.
 allowed-tools:
-  - TeamCreate
-  - TeamDelete
   - TaskCreate
   - TaskUpdate
   - Agent
   - SendMessage
-  - ReadFile
-  - WriteFile
+  - Read
+  - Write
+  - Bash
 ---
 
 # Skill: Master Orchestrator Pipeline
 
-이 스킬은 10개의 에이전트 페르소나를 페이즈(Phase)별로 동적 라우팅하여 스폰하고, 공유 작업 목록(Task)과 직접 통신(P2P)을 통해 작업을 조율한 뒤 안전하게 해체하는 마스터 지휘소다.
+이 스킬은 12개의 에이전트 페르소나를 페이즈(Phase)별로 동적 라우팅하여 스폰하고, 공유 작업 목록(Task)과 직접 통신(P2P)을 통해 작업을 조율한 뒤 안전하게 해체하는 마스터 지휘소다.
 
 ## 📌 Orchestration Rules (절대 준수 규칙)
 
 1. **팀원 간 직접 통신 (P2P Communication)**
-   - `TeamCreate`로 스폰된 에이전트들은 리더(오케스트레이터)를 거치지 않고, 반드시 `SendMessage(to: "에이전트명")`를 사용하여 팀원끼리 직접 소통하고 피드백 루프를 돌아야 한다.
+   - `Agent`로 teammate를 이름과 역할을 지정해 스폰한다. 첫 teammate가 스폰되면 현재 세션의 agent team이 자동 구성된다.
+   - 단일 인스턴스 역할의 teammate 이름은 반드시 agent type과 동일하게 지정한다(예: `frontend-developer`). 같은 역할을 복제할 때는 `frontend-developer-1`처럼 고유 이름을 부여하고, spawn prompt에 함께 통신할 모든 실제 recipient 이름을 명시한다.
+   - teammate들은 리더(오케스트레이터)를 거치지 않고, 반드시 `SendMessage(to: "정확한 에이전트명")`를 사용하여 서로 직접 소통하고 피드백 루프를 돌아야 한다.
+   - 브로드캐스트 수신자 `"all"`은 사용하지 않는다. 모두에게 알려야 할 때는 활성 teammate별로 한 번씩 전송한다.
 2. **명시적 작업 할당 (Task Board)**
    - 각 페이즈가 시작될 때 오케스트레이터는 구두로 지시하지 말고, 반드시 `TaskCreate`를 호출하여 에이전트들이 수행할 작업(Task)들을 명확한 티켓 형태로 보드에 등록해야 한다.
-3. **안전 종료 시퀀스 (Graceful Shutdown)**
-   - 작업이 끝났다고 즉시 `TeamDelete`를 호출해선 안 된다.
-   - 반드시 `SendMessage(to: "all", message: "shutdown_request")`를 보내 모든 에이전트가 파일 쓰기(WriteFile)를 완료했는지 확인(Confirm)받은 후, `TeamDelete`로 팀을 해체한다.
+3. **마이크로 커밋 및 안전 종료 시퀀스 (Micro-commits & Graceful Shutdown)**
+   - 각 Phase나 개발 트랙 종료 시 활성 teammate 각각에게 이름으로 `shutdown_request`를 전송하고, 파일 I/O 완료와 종료 승인을 모두 확인한다.
+   - **그 직후, 오케스트레이터가 직접 `Bash` 도구를 사용하여 해당 Phase의 변경만 스테이징하고 `git commit -m "feat(Phase N): [작업명] 완료"` 형식으로 스냅샷을 저장한다.**
+   - 별도 팀 삭제 도구는 사용하지 않는다. 공유 팀 리소스는 세션 종료 시 자동 정리된다.
 4. **감사 로그 기록 (Audit Logging)**
    - 각 페이즈가 시작하고 종료될 때마다 `.claude/_workspace/log/orchestrator-log.jsonl` 파일에 Append-only 방식으로 로그를 남긴다.
    - 포맷: `{"timestamp": "ISO8601", "phase": "Phase N", "status": "START|END", "task_batch": ["task1", "task2"]}`
@@ -33,44 +36,38 @@ allowed-tools:
 
 ## 🚀 Workflow (작업 순서)
 
-### Phase 0: 컨텍스트 분석 및 동적 라우팅 (Context Check)
-- 사용자의 요청과 `.claude/_workspace/`의 기존 산출물 유무를 분석하여 진행할 Phase 범위를 결정한다.
-  - **[전체 구축 (Full)]**: Phase 1 ➔ 2 ➔ 3 (Track A+B) ➔ 4
-  - **[프론트엔드 단독 (FE-only)]**: Phase 3 (Track A-FE) ➔ Phase 4
-  - **[백엔드 단독 (BE-only)]**: Phase 3 (Track A-BE) ➔ Phase 4
-  - **[인프라 단독 (Infra-only)]**: Phase 3 (Track B)만 실행
-  - **[문서 단독 (Docs-only)]**: Phase 4만 실행
-- `orchestrator-log.jsonl`에 파이프라인 초기화(INIT) 및 라우팅 결정 로그를 작성한다.
+### Phase 0: 컨텍스트 분석 및 동적 라우팅
+- 사용자 요청과 `.claude/_workspace/`의 기존 산출물을 분석하여 필요한 페이즈만 선택한다.
+  - **전체 구축 (Full):** Phase 1 ➔ 2 ➔ 3(Track A+B) ➔ 4 ➔ 5
+  - **프론트엔드 단독 (FE-only):** Phase 2(계약 필요 시) ➔ Phase 3(Frontend QA/Developer/Reviewer) ➔ 4 ➔ 5
+  - **백엔드 단독 (BE-only):** Phase 2(계약 필요 시) ➔ Phase 3(Backend QA/Developer/Reviewer) ➔ 4 ➔ 5
+  - **인프라 단독 (Infra-only):** Phase 3 Track B만 실행
+  - **문서 단독 (Docs-only):** Phase 5의 `tech-writer`만 실행
+- `orchestrator-log.jsonl`에 `INIT` 로그와 선택·생략한 페이즈 및 근거를 기록한다.
 
-### Phase 1: 시스템 설계 (Team 모드)
-1. **[START LOG]** Phase 1 시작 로그 작성.
-2. *([전체 구축] 요청 시에만 실행)* `TeamCreate`로 `system-architect` (3인) 스폰.
-3. `TaskCreate`로 [DB 스키마 설계, 인프라 설계, API/UI 명세 작성] 태스크 등록.
-4. 아키텍트 간 직접 통신(`SendMessage`)으로 `design.md` 작성 대기.
-5. 산출물 완료 시 `shutdown_request` 전송 ➔ 저장 확인 ➔ `TeamDelete` 호출.
-6. **[END LOG]** Phase 1 종료 로그 작성.
+### Phase 1: 아키텍처 설계
+- 전체 구축이거나 아키텍처 변경이 필요한 경우에만 `system-architect` agent type으로 teammate들을 이름을 지정해 스폰하고, `design.md`를 산출한다.
+- ⭐️ **[마이크로 커밋]** 완료 후 `git commit -m "docs(architecture): 시스템 설계 완료"` 실행.
 
-### Phase 2: 티켓 및 계약 설계 (Sub-agent 모드 병렬)
-1. **[START LOG]** Phase 2 시작 로그 작성.
-2. *([전체 구축] 시 전체 실행. 부분 구축 시 `tech-lead`만 등 조건부 실행)*
-3. `Agent` 도구를 사용해 `issue-pm`과 `tech-lead`를 백그라운드 스폰(`run_in_background: true`).
-4. 각 서브 에이전트가 `issue_report.md`와 `03_contracts/*.ts` 작성을 완료하고 결과를 반환할 때까지 대기.
-5. **[END LOG]** Phase 2 종료 로그 작성.
+### Phase 2: 티켓팅 및 브랜치 파생 (Sub-agent)
+- 필요한 역할만 `Agent`로 호출한다. 신규 티켓이 필요하면 `issue-pm` agent type, 계약이 필요하면 `tech-leader` agent type을 명시한다.
+- ⭐️ `issue-pm`이 티켓을 생성하고 **`feature/issue-*` 브랜치로 자동 체크아웃(Checkout)**하는지 모니터링한다.
+- 완료 후 `git commit -m "chore(issue): 티켓 생성 및 인터페이스 계약 완료"` 실행.
 
-### Phase 3: 애플리케이션 및 인프라 구현 (Team 모드 Scale-out)
-1. **[START LOG]** Phase 3 시작 로그 작성.
-2. **Track A (앱 구현):** - `TeamCreate`로 `qa-tester`, `backend-developer`(API 개수에 맞춰 수평 복제), `frontend-developer`(화면 개수에 맞춰 수평 복제), `code-reviewer` 스폰.
-   - `TaskCreate`로 구현해야 할 각 API/UI 티켓을 개별 태스크로 등록.
-   - QA, BE, FE, Reviewer가 P2P(`SendMessage`)로 핑퐁 검증 루프 수행.
-3. **Track B (인프라 자동화):** - `TeamCreate`로 `devops-engineer` 2명 스폰 후 스크립트 작성 태스크 할당.
-4. 양쪽 트랙 태스크가 승인(Approve)되면 `shutdown_request` 전송 ➔ 저장 확인 ➔ `TeamDelete` 로 양쪽 팀 해체.
-5. **[END LOG]** Phase 3 종료 로그 작성.
+### Phase 3: 병렬 개발 트랙 (FE/BE/QA/Infra)
+- Track A (앱 구현): 선택된 라우트에 맞춰 `backend-qa`, `backend-developer`, `frontend-qa`, `frontend-developer`, `code-reviewer` agent type 중 필요한 역할을 정확히 명시해 스폰하고 P2P 핑퐁 개발을 진행한다.
+- Track B (인프라): `devops-engineer` agent type으로 teammate를 스폰해 설정을 진행한다.
+- 완료 후 `git commit -m "feat(app): Phase 3 애플리케이션 및 인프라 구현 완료"` 실행.
+- 필요에 따라 `feat`을 제외한 `fix` 등의 커밋 메시지 형태도 허용된다.
 
-### Phase 4: 배포 및 자산화 (Sub-agent 모드 병렬)
-1. **[START LOG]** Phase 4 시작 로그 작성.
-2. *([인프라 단독]을 제외한 경우 실행)* `Agent` 도구로 `release-manager`와 `tech-writer` 백그라운드 스폰.
-3. GitLab MR 링크 및 Wiki 작성 완료 결과를 반환받아 통합한다.
-4. **[END LOG]** Phase 4 종료 로그 작성 및 파이프라인 전체 종료.
+### Phase 4: E2E 통합 테스트 (신규)
+- `Agent`로 `e2e-tester` agent type을 명시해 호출한다.
+- Playwright 테스트가 100% 통과(Green)되는지 대기한다.
+- 완료 후 `git commit -m "test(e2e): 브라우저 통합 시나리오 검증 완료"` 실행.
+
+### Phase 5: 릴리즈(MR) 및 문서화
+- 라우팅 결과에 따라 `release-manager`와 `tech-writer` agent type 중 필요한 역할만 명시해 호출한다.
+- 생성된 마이크로 커밋들을 모아 원격 저장소에 Push하고 MR/PR을 생성한 뒤 파이프라인을 종료한다.
 
 ---
 
