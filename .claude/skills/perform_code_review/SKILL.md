@@ -2,7 +2,7 @@
 name: perform_code_review
 description: "프론트엔드 및 백엔드 팀이 구현한 소스 코드(`src/`)를 아키텍처 규칙, 보안, 성능 관점에서 검수합니다. '코드 리뷰', '보안 검수', '성능 검사', '리뷰 요청' 시 반드시 이 스킬을 호출하십시오. 새로운 비즈니스 로직을 직접 구현하거나 테스트 코드(`tests/`)를 작성하는 실무 작업에는 절대 이 스킬을 트리거하지 마십시오."
 allowed-tools:
-  - ReadFile
+  - Read
   - Bash
   - SendMessage
 ---
@@ -12,7 +12,7 @@ allowed-tools:
 ## Workflow (작업 순서)
 
 1. **계약 준수 여부 검증 (Contract Verification)**
-   - `ReadFile`을 사용하여 `.claude/_workspace/03_contracts/`의 인터페이스 규격과 실제 구현체(`src/`)의 타입이 100% 일치하는지 대조한다.
+   - `Read`을 사용하여 `.claude/_workspace/03_contracts/`의 인터페이스 규격과 실제 구현체(`src/`)의 타입이 100% 일치하는지 대조한다.
    - 파라미터 누락, 임의의 `any` 타입 사용, 합의되지 않은 API 응답 포맷 변경이 있는지 확인한다.
 
 2. **정적 분석 및 테스트 통과 확인 (Static Analysis & Tests)**

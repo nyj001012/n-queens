@@ -2,9 +2,9 @@
 name: implement_nextjs_api
 description: "Next.js 16 App Router 및 Prisma 7 기반의 백엔드 API 라우트와 비즈니스 로직(Controller, Service, Repository)을 구현합니다. '백엔드 구현', 'API 개발', 'DB 연동 로직 작성' 요청 시 반드시 이 스킬을 호출하십시오. 프론트엔드 UI를 수정하거나 인프라를 세팅하는 작업, 그리고 QA가 작성한 테스트 코드(`tests/`) 자체를 직접 수정하는 꼼수 작업에는 절대 이 스킬을 트리거하지 마십시오."
 allowed-tools:
-  - ReadFile
-  - WriteFile
-  - EditFile
+  - Read
+  - Write
+  - Edit
   - Bash
   - SendMessage
 ---
@@ -14,7 +14,7 @@ allowed-tools:
 ## Workflow (작업 순서)
 
 1. **계약 및 테스트 명세 확인 (Contract & Test Review)**
-   - `ReadFile`을 사용하여 `.claude/_workspace/03_contracts/`의 인터페이스 파일과 QA가 작성한 `tests/`의 실패하는(Red) 테스트 코드를 읽고 목표를 파악한다.
+   - `Read`을 사용하여 `.claude/_workspace/03_contracts/`의 인터페이스 파일과 QA가 작성한 `tests/`의 실패하는(Red) 테스트 코드를 읽고 목표를 파악한다.
    - 🚨 **주의:** 테스트 코드가 실패한다고 해서 `tests/` 디렉터리의 코드를 임의로 수정하는 행위는 절대 금지된다. 오직 `src/`의 구현 코드로만 해결해야 한다.
 
 2. **3계층 구조 기반 로직 작성 (3-Layer Implementation)**
